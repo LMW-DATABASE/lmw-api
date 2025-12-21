@@ -1,0 +1,22 @@
+django
+
+# Para criar APIs REST
+djangorestframework
+
+# Para autenticação com Tokens JWT 
+djangorestframework-simplejwt
+
+# Para gerenciar variáveis de ambiente 
+python-dotenv
+
+# Driver de conexão com o PostgreSQL 
+psycopg2-binary
+
+# Documentação
+drf-spectacular
+
+django-cors-headers
+
+ipython
+pandas
+openpyxl
