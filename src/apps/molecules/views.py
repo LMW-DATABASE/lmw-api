@@ -22,17 +22,17 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         params = self.request.query_params
 
         databases = params.getlist('database')
-        referencias = params.getlist('referencia')
-        nome_planta = params.getlist('nome_planta')
+        referencias = params.get('referencia')
+        nome_planta = params.get('nome_planta')
 
         if databases:
             queryset = queryset.filter(database__in=databases)
 
         if referencias:
-            queryset = queryset.filter(referencia__in=referencias)
+            queryset = queryset.filter(referencia__icontains=referencias)
 
         if nome_planta:
-            queryset = queryset.filter(nome_planta__in=nome_planta)
+            queryset = queryset.filter(nome_planta__icontains=nome_planta)
 
         return queryset
 
