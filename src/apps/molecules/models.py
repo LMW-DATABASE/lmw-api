@@ -37,9 +37,13 @@ class Molecule(models.Model):
     np_likeness_score = models.FloatField(blank=True, null=True)
     murcko_scaffold = models.CharField(max_length=500, blank=True, null=True)
 
+    # --- Representação Visual ---
+    estrutura_svg = models.TextField(blank=True, null=True)
+
     # --- Metadados ---
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome_molecula

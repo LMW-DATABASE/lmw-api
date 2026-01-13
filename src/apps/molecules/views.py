@@ -13,7 +13,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     queryset = Molecule.objects.all().order_by('nome_molecula')
     serializer_class = MoleculeSerializer
     filter_backends = [filters.SearchFilter]
-    search_fields = ['nome_molecula', 'smiles', 'planta'] 
+    search_fields = ['nome_molecula', 'smiles', 'nome_planta'] 
 
     def get_serializer_class(self):
         """

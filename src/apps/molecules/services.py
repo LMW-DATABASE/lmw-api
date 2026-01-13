@@ -1,13 +1,19 @@
 from rdkit import Chem
-from rdkit.Chem import Descriptors, rdMolDescriptors, QED
+from rdkit.Chem import Descriptors, rdMolDescriptors, QED, Draw # Adicionado Draw
 from rdkit.Chem.Scaffolds import MurckoScaffold
 from .models import Molecule
 
 def calculate_molecular_properties(smiles: str) -> dict:
-    """Lógica pura RDKit para extrair propriedades."""
+    """Lógica RDKit para extrair propriedades e gerar o desenho 2D em SVG."""
     mol = Chem.MolFromSmiles(smiles)
     if not mol:
         return {}
+    
+    # --- Geração do Desenho 2D (SVG) ---
+    drawer = Draw.MolDraw2DSVG(300, 300)
+    drawer.DrawMolecule(mol)
+    drawer.FinishDrawing()
+    svg_code = drawer.GetDrawingText()
     
     return {
         'smiles_canonical': Chem.MolToSmiles(mol, isomericSmiles=False),
@@ -27,20 +33,18 @@ def calculate_molecular_properties(smiles: str) -> dict:
         'fraction_csp3': Descriptors.FractionCSP3(mol),
         'qed_score': QED.qed(mol),
         'murcko_scaffold': Chem.MolToSmiles(MurckoScaffold.GetScaffoldForMol(mol)),
+        'estrutura_svg': svg_code, 
     }
 
 def molecule_bulk_create(data_list):
-    """
-    Processa a lista de dicionários do Excel e salva no banco.
-    É esta função que a sua View está procurando.
-    """
     molecules_instances = []
     for item in data_list:
         smiles = item.get('smiles')
         if smiles:
             extra_data = calculate_molecular_properties(smiles)
             if extra_data:
-                item.update(extra_data)
+                item.update(extra_data) 
+        
         molecules_instances.append(Molecule(**item))
     
     return Molecule.objects.bulk_create(molecules_instances)

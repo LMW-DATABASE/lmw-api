@@ -1,20 +1,22 @@
 from rest_framework import serializers
-from .models import Molecula
+from .models import Molecule  
 
-class MoleculaSerializer(serializers.ModelSerializer):
+class MoleculeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Molecula
+        model = Molecule
         fields = [
             'id', 
-            'nome', 
+            'nome_molecula', 
             'smiles', 
             'referencia', 
-            'planta', 
+            'nome_planta',   
             'database', 
             'origem', 
-            'atividade'
+            'activity',      
+            'estrutura_svg' 
         ]
-class MoleculaAdvancedSerializer(serializers.ModelSerializer):
+
+class MoleculeAdvancedSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Molecula
-        fields = '__all__' 
+        model = Molecule
+        fields = '__all__'
