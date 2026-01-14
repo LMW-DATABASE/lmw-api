@@ -10,26 +10,20 @@ from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer
 from .services import calculate_molecular_properties, molecule_bulk_create
 
 class MoleculeViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gerenciar moléculas, incluindo filtros avançados,
-    cálculos químicos automáticos e upload em massa.
-    """
+
     queryset = Molecule.objects.all().order_by('nome_molecula')
     serializer_class = MoleculeSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['nome_molecula', 'smiles', 'nome_planta'] 
 
     def get_serializer_class(self):
-        """
-        Garante o uso do serializer completo para a página de detalhes.
-        """
         if self.action == 'retrieve':
             return MoleculeAdvancedSerializer
         return MoleculeSerializer
 
     def get_queryset(self):
         """
-        Aplica filtros baseados em query parameters (database, referencia, nome_planta).
+        Aplica filtros
         """
         queryset = super().get_queryset()
         params = self.request.query_params
@@ -62,7 +56,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        Calcula propriedades RDKit automaticamente no cadastro manual.
+        Calcula propriedades RDKit 
         """
         smiles = serializer.validated_data.get('smiles')
         extra_data = calculate_molecular_properties(smiles)
@@ -75,7 +69,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def databases(self, request):
         """
-        Retorna a lista de databases únicas cadastradas para filtros no frontend.
+        Retorna a lista de databases 
         """
         databases = (
             Molecule.objects
@@ -88,7 +82,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def referencias(self, request):
         """
-        Retorna a lista de referências únicas cadastradas para filtros no frontend.
+        Retorna a lista de referências
         """
         referencias = (
             Molecule.objects
@@ -101,7 +95,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload_excel(self, request, *args, **kwargs):
         """
-        Processa upload massivo via Excel garantindo a geração de SVGs e propriedades.
+        Processa upload via Excel 
         """
         if 'file' not in request.FILES:
             return Response(
@@ -123,7 +117,6 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         valid_data = []
         errors = []
 
-        # Validação linha a linha antes de enviar para o Service Layer
         for index, item in enumerate(data_list):
             serializer = self.get_serializer(data=item)
             if serializer.is_valid():
@@ -138,7 +131,6 @@ class MoleculeViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            # Chama o service layer para processamento químico massivo (RDKit)
             created_molecules = molecule_bulk_create(valid_data)
             return Response(
                 {
