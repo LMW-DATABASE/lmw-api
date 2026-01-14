@@ -1,7 +1,4 @@
-# src/apps/molecules/views.py
-
 import pandas as pd
-
 from rest_framework import viewsets, filters, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -9,16 +6,32 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Molecule
-from .serializers import MoleculeSerializer
-
+from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer 
+from .services import calculate_molecular_properties, molecule_bulk_create
 
 class MoleculeViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar moléculas, incluindo filtros avançados,
+    cálculos químicos automáticos e upload em massa.
+    """
+    queryset = Molecule.objects.all().order_by('nome_molecula')
     serializer_class = MoleculeSerializer
     filter_backends = [filters.SearchFilter]
-    search_fields = ['nome_molecula']
+    search_fields = ['nome_molecula', 'smiles', 'nome_planta'] 
+
+    def get_serializer_class(self):
+        """
+        Garante o uso do serializer completo para a página de detalhes.
+        """
+        if self.action == 'retrieve':
+            return MoleculeAdvancedSerializer
+        return MoleculeSerializer
 
     def get_queryset(self):
-        queryset = Molecule.objects.all().order_by('nome_molecula')
+        """
+        Aplica filtros baseados em query parameters (database, referencia, nome_planta).
+        """
+        queryset = super().get_queryset()
         params = self.request.query_params
 
         databases = params.getlist('database')
@@ -37,22 +50,32 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         return queryset
 
     def get_permissions(self):
-        if self.action in [
-            'list',
-            'retrieve',
-            'databases',
-            'referencias'
-        ]:
+        """
+        Define permissões públicas para leitura e privadas para escrita.
+        """
+        if self.action in ['list', 'retrieve', 'databases', 'referencias']:
             permission_classes = [AllowAny]
         else:
             permission_classes = [IsAuthenticated]
 
         return [permission() for permission in permission_classes]
 
+    def perform_create(self, serializer):
+        """
+        Calcula propriedades RDKit automaticamente no cadastro manual.
+        """
+        smiles = serializer.validated_data.get('smiles')
+        extra_data = calculate_molecular_properties(smiles)
+        
+        if extra_data:
+            serializer.save(**extra_data)
+        else:
+            serializer.save()
+
     @action(detail=False, methods=['get'])
     def databases(self, request):
         """
-        Retorna a lista de databases únicas cadastradas
+        Retorna a lista de databases únicas cadastradas para filtros no frontend.
         """
         databases = (
             Molecule.objects
@@ -65,7 +88,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def referencias(self, request):
         """
-        Retorna a lista de referências únicas cadastradas
+        Retorna a lista de referências únicas cadastradas para filtros no frontend.
         """
         referencias = (
             Molecule.objects
@@ -75,14 +98,10 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         )
         return Response(referencias)
 
-    @action(
-        detail=False,
-        methods=['post'],
-        parser_classes=[MultiPartParser, FormParser]
-    )
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload_excel(self, request, *args, **kwargs):
         """
-        Upload em massa de moléculas a partir de um arquivo Excel
+        Processa upload massivo via Excel garantindo a geração de SVGs e propriedades.
         """
         if 'file' not in request.FILES:
             return Response(
@@ -93,43 +112,40 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         file_obj = request.FILES['file']
 
         try:
-            df = pd.read_excel(file_obj)
+            df = pd.read_excel(file_obj).replace({pd.NA: None})
+            data_list = df.to_dict(orient='records')
         except Exception as e:
             return Response(
                 {'error': f'Erro ao ler o arquivo Excel: {e}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        molecules_to_create = []
+        valid_data = []
         errors = []
 
-        for index, row in df.iterrows():
-            data = row.to_dict()
-            clean_data = {k: v for k, v in data.items() if pd.notna(v)}
-
-            serializer = self.get_serializer(data=clean_data)
+        # Validação linha a linha antes de enviar para o Service Layer
+        for index, item in enumerate(data_list):
+            serializer = self.get_serializer(data=item)
             if serializer.is_valid():
-                molecules_to_create.append(
-                    Molecule(**serializer.validated_data)
-                )
+                valid_data.append(serializer.validated_data)
             else:
-                errors.append({
-                    'row': index + 2,
-                    'errors': serializer.errors
-                })
+                errors.append({'linha_excel': index + 2, 'erros': serializer.errors})
 
         if errors:
             return Response(
-                {'status': 'falha', 'errors': errors},
+                {'status': 'falha', 'errors': errors}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        Molecule.objects.bulk_create(molecules_to_create)
-
-        return Response(
-            {
-                'status': 'sucesso',
-                'message': f'{len(molecules_to_create)} moléculas cadastradas com sucesso.'
-            },
-            status=status.HTTP_201_CREATED
-        )
+        
+        try:
+            # Chama o service layer para processamento químico massivo (RDKit)
+            created_molecules = molecule_bulk_create(valid_data)
+            return Response(
+                {
+                    'status': 'sucesso', 
+                    'message': f'{len(created_molecules)} moléculas cadastradas com sucesso.'
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            return Response({'error': f'Erro no processamento químico: {str(e)}'}, status=500)
