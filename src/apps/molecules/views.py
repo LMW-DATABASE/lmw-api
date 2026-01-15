@@ -10,28 +10,54 @@ from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer
 from .services import calculate_molecular_properties, molecule_bulk_create
 
 class MoleculeViewSet(viewsets.ModelViewSet):
+
     queryset = Molecule.objects.all().order_by('nome_molecula')
     serializer_class = MoleculeSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['nome_molecula', 'smiles', 'nome_planta'] 
 
     def get_serializer_class(self):
-        """
-        Define qual serializer usar dependendo da ação.
-        """
         if self.action == 'retrieve':
             return MoleculeAdvancedSerializer
-        
         return MoleculeSerializer
 
+    def get_queryset(self):
+        """
+        Aplica filtros
+        """
+        queryset = super().get_queryset()
+        params = self.request.query_params
+
+        databases = params.getlist('database')
+        referencias = params.get('referencia')
+        nome_planta = params.get('nome_planta')
+
+        if databases:
+            queryset = queryset.filter(database__in=databases)
+
+        if referencias:
+            queryset = queryset.filter(referencia__icontains=referencias)
+
+        if nome_planta:
+            queryset = queryset.filter(nome_planta__icontains=nome_planta)
+
+        return queryset
+
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        """
+        Define permissões públicas para leitura e privadas para escrita.
+        """
+        if self.action in ['list', 'retrieve', 'databases', 'referencias']:
             permission_classes = [AllowAny]
         else:
             permission_classes = [IsAuthenticated]
+
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
+        """
+        Calcula propriedades RDKit 
+        """
         smiles = serializer.validated_data.get('smiles')
         extra_data = calculate_molecular_properties(smiles)
         
@@ -40,10 +66,42 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         else:
             serializer.save()
 
+    @action(detail=False, methods=['get'])
+    def databases(self, request):
+        """
+        Retorna a lista de databases 
+        """
+        databases = (
+            Molecule.objects
+            .values_list('database', flat=True)
+            .distinct()
+            .order_by('database')
+        )
+        return Response(databases)
+
+    @action(detail=False, methods=['get'])
+    def referencias(self, request):
+        """
+        Retorna a lista de referências
+        """
+        referencias = (
+            Molecule.objects
+            .values_list('referencia', flat=True)
+            .distinct()
+            .order_by('referencia')
+        )
+        return Response(referencias)
+
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload_excel(self, request, *args, **kwargs):
+        """
+        Processa upload via Excel 
+        """
         if 'file' not in request.FILES:
-            return Response({'error': 'Nenhum arquivo enviado.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Nenhum arquivo enviado.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         file_obj = request.FILES['file']
 
@@ -51,7 +109,10 @@ class MoleculeViewSet(viewsets.ModelViewSet):
             df = pd.read_excel(file_obj).replace({pd.NA: None})
             data_list = df.to_dict(orient='records')
         except Exception as e:
-            return Response({'error': f'Erro ao ler o arquivo Excel: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': f'Erro ao ler o arquivo Excel: {e}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         valid_data = []
         errors = []
@@ -64,7 +125,10 @@ class MoleculeViewSet(viewsets.ModelViewSet):
                 errors.append({'linha_excel': index + 2, 'erros': serializer.errors})
 
         if errors:
-            return Response({'status': 'falha', 'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'status': 'falha', 'errors': errors}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             created_molecules = molecule_bulk_create(valid_data)
