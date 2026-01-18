@@ -20,3 +20,4 @@ django-cors-headers
 ipython
 pandas
 openpyxl
+rdkit
