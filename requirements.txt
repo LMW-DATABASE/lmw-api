@@ -1,23 +1,22 @@
+# Core e API
 django
-
-# Para criar APIs REST
 djangorestframework
-
-# Para autenticação com Tokens JWT 
 djangorestframework-simplejwt
-
-# Para gerenciar variáveis de ambiente 
-python-dotenv
-
-# Driver de conexão com o PostgreSQL 
-psycopg2-binary
-
-# Documentação
+django-cors-headers
 drf-spectacular
 
-django-cors-headers
+# Produção
+gunicorn
+whitenoise
 
-ipython
+# Banco de Dados e Ambiente
+psycopg2-binary
+python-dotenv
+
+# Ciência de Dados e Química
+rdkit
 pandas
 openpyxl
-rdkit
+
+# Utilidades
+ipython

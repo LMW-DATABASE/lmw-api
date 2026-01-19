@@ -1,5 +1,3 @@
-# docker-compose.yml
-
 version: '3.8'
 
 services:
@@ -8,22 +6,38 @@ services:
     container_name: lmw_postgres_db
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    env_file:
-      - ./.env
+    env_file: .env
+    networks:
+      - lmw-network
+
   backend:
     build: .
     container_name: lmw_django_api
-    volumes:
-      - .:/app
     ports:
-      - "${DJANGO_PORT:-8000}:8000"
-    env_file:
-      - ./.env
+      - "8001:8000"
+    env_file: .env
     depends_on:
       - db
-    command: >
-      sh -c "python manage.py migrate && 
-             python manage.py runserver 0.0.0.0:8000"
+    networks:
+      - lmw-network
+    command: ${DJANGO_COMMAND:-python manage.py runserver 0.0.0.0:8000}
+
+  frontend:
+    build:
+      context: ../ednu-lmw
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: lmw_frontend_ui
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - lmw-network
 
 volumes:
   postgres_data:
+
+networks:
+  lmw-network:
+    driver: bridge

@@ -4,12 +4,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.renderers import JSONRenderer
 
 from .models import Molecule
 from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer 
 from .services import calculate_molecular_properties, molecule_bulk_create
 
 class MoleculeViewSet(viewsets.ModelViewSet):
+    renderer_classes = [JSONRenderer]
 
     queryset = Molecule.objects.all().order_by('nome_molecula')
     serializer_class = MoleculeSerializer
