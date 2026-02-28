@@ -66,6 +66,22 @@ class MoleculeViewSet(viewsets.ModelViewSet):
             serializer.save(**extra_data)
         else:
             serializer.save()
+    
+    def perform_update(self, serializer):
+        """
+        Recalcula propriedades RDKit ao editar molécula
+        """
+        smiles = serializer.validated_data.get(
+            'smiles',
+            serializer.instance.smiles
+        )
+
+        extra_data = calculate_molecular_properties(smiles)
+
+        if extra_data:
+            serializer.save(**extra_data)
+        else:
+            serializer.save()
 
     @action(detail=False, methods=['get'])
     def databases(self, request):
