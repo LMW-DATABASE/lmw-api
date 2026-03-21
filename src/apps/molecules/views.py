@@ -27,7 +27,6 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         params = self.request.query_params
         user = self.request.user
 
-        # 🔒 Público NÃO vê moléculas com erro
         if not user.is_authenticated or not user.is_staff:
             queryset = queryset.filter(status_processamento='ok')
 
@@ -54,7 +53,6 @@ class MoleculeViewSet(viewsets.ModelViewSet):
 
         return [permission() for permission in permission_classes]
 
-    # 🔬 PROCESSAMENTO RDKit CENTRALIZADO
     def _processar_rdkit(self, instance, smiles):
         try:
             extra_data = calculate_molecular_properties(smiles)
@@ -85,7 +83,6 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         old_smiles = serializer.instance.smiles
         instance = serializer.save()
 
-        # 🔁 Só reprocessa se SMILES mudou
         if old_smiles != instance.smiles:
             self._processar_rdkit(instance, instance.smiles)
 
