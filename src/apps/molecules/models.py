@@ -1,8 +1,9 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Molecule(models.Model):
     nome_molecula = models.CharField(max_length=255)
-    smiles = models.CharField(max_length=500, unique=True) 
+    smiles = models.CharField(max_length=500, unique=True)
     referencia = models.CharField(max_length=255)
     nome_planta = models.CharField(max_length=255)
     database = models.CharField(max_length=100)
@@ -47,3 +48,33 @@ class Molecule(models.Model):
 
     def __str__(self):
         return self.nome_molecula
+
+
+class MoleculeRequest(models.Model):
+    class RequestType(models.TextChoices):
+        NOVA = "nova", "Nova Molécula"
+        CORRECAO = "correcao", "Correção"
+
+    class Status(models.TextChoices):
+        PENDENTE = "pendente", "Pendente"
+        APROVADO = "aprovado", "Aprovado"
+        REJEITADO = "rejeitado", "Rejeitado"
+
+    tipo = models.CharField(max_length=20, choices=RequestType.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDENTE)
+
+    nome_editor = models.CharField(max_length=120)
+    email = models.EmailField()
+
+    payload = models.JSONField()
+
+    aprovador = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    molecula_alvo = models.ForeignKey(Molecule, null=True, blank=True, on_delete=models.SET_NULL)
+
+    motivo_rejeicao = models.TextField(null=True, blank=True)
+
+    data_requisicao = models.DateTimeField(auto_now_add=True)
+    data_aprovacao = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.tipo} - {self.nome_editor}"
