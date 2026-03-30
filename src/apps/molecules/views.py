@@ -137,7 +137,7 @@ class PublicCreateMoleculeRequest(generics.CreateAPIView):
 class AdminListRequests(generics.ListAPIView):
     queryset = MoleculeRequest.objects.all().order_by('-data_requisicao')
     serializer_class = MoleculeRequestSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = []
 
 
 class ApproveRequest(generics.UpdateAPIView):
