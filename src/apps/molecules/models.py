@@ -3,7 +3,7 @@ from django.db import models
 class Molecule(models.Model):
     nome_molecula = models.CharField(max_length=255)
     smiles = models.CharField(max_length=500, unique=True)
-    referencia = models.CharField(max_length=255)
+    referencia = models.CharField(max_length=2000)
     nome_planta = models.CharField(max_length=255)
     database = models.CharField(max_length=100)
     origem = models.CharField(max_length=255, blank=True, null=True)
@@ -12,7 +12,7 @@ class Molecule(models.Model):
     # --- Identificadores Estruturais ---
     smiles_canonical = models.CharField(max_length=500, blank=True, null=True)
     inchi = models.TextField(blank=True, null=True)
-    inchikey = models.CharField(max_length=27, unique=True, db_index=True, blank=True, null=True)
+    inchikey = models.CharField(max_length=27, db_index=True, blank=True, null=True)
     formula_molecular = models.CharField(max_length=100, blank=True, null=True)
 
     # --- Dados de Massa ---
