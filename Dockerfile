@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV PYTHONPATH=/app/src
 
 RUN apt-get update && apt-get install -y \
     libxrender1 libxext6 libsm6 libexpat1 libfontconfig1 \
