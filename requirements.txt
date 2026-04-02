@@ -20,3 +20,4 @@ openpyxl
 
 # Utilidades
 ipython
+dj-database-url

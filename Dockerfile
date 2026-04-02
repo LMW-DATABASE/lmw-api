@@ -22,4 +22,4 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE 8000
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "lmw.wsgi:application", "--bind", "0.0.0.0:8000"]
