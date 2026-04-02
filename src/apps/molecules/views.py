@@ -7,7 +7,78 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import Molecule
 from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer
-from .services import calculate_molecular_properties, molecule_bulk_create
+from .services import calculate_molecular_properties, molecule_bulk_upsert
+
+UPLOAD_EXCEL_REQUIRED_COLUMNS = (
+    'nome_molecula',
+    'smiles',
+    'referencia',
+    'nome_planta',
+    'database',
+)
+UPLOAD_EXCEL_OPTIONAL_COLUMNS = ('origem', 'activity')
+UPLOAD_EXCEL_TEXT_PLACEHOLDERS = {
+    'referencia',
+    'nome_planta',
+    'database',
+    'origem',
+    'activity',
+}
+UPLOAD_EXCEL_EMPTY_TEXT = 'Não Informado'
+
+
+def _normalize_excel_cell(value):
+    if pd.isna(value):
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+        return cleaned or None
+    return value
+
+
+def _normalize_upload_excel_row(item):
+    normalized = {}
+    for key, value in item.items():
+        normalized_value = _normalize_excel_cell(value)
+        if key in UPLOAD_EXCEL_TEXT_PLACEHOLDERS and normalized_value is None:
+            normalized[key] = UPLOAD_EXCEL_EMPTY_TEXT
+        else:
+            normalized[key] = normalized_value
+    return normalized
+
+
+def _normalize_upload_excel_dataframe(df):
+    """
+    Mapeia cabeçalhos (case-insensitive, strip) para os nomes esperados pelo serializer.
+    Remove colunas que não pertencem ao upload em massa.
+    """
+    lower_to_actual = {}
+    for col in df.columns:
+        key = str(col).strip().lower()
+        if key not in lower_to_actual:
+            lower_to_actual[key] = col
+
+    missing = []
+    rename = {}
+    for req in UPLOAD_EXCEL_REQUIRED_COLUMNS:
+        if req not in lower_to_actual:
+            missing.append(req)
+        else:
+            rename[lower_to_actual[req]] = req
+
+    if missing:
+        return None, missing
+
+    for opt in UPLOAD_EXCEL_OPTIONAL_COLUMNS:
+        if opt in lower_to_actual:
+            rename[lower_to_actual[opt]] = opt
+
+    df = df.rename(columns=rename)
+    allowed = set(UPLOAD_EXCEL_REQUIRED_COLUMNS + UPLOAD_EXCEL_OPTIONAL_COLUMNS)
+    extra = [c for c in df.columns if c not in allowed]
+    if extra:
+        df = df.drop(columns=extra, errors='ignore')
+    return df, []
 
 
 class MoleculeViewSet(viewsets.ModelViewSet):
@@ -117,16 +188,43 @@ class MoleculeViewSet(viewsets.ModelViewSet):
 
         try:
             df = pd.read_excel(file_obj).replace({pd.NA: None})
-            data_list = df.to_dict(orient='records')
         except Exception as e:
             return Response({'error': f'Erro ao ler o Excel: {e}'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        df, missing_cols = _normalize_upload_excel_dataframe(df)
+        if missing_cols:
+            return Response(
+                {
+                    'error': 'O ficheiro Excel não contém todas as colunas obrigatórias.',
+                    'missing_columns': missing_cols,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data_list = df.to_dict(orient='records')
+
         valid_data = []
         errors = []
 
-        for index, item in enumerate(data_list):
-            serializer = self.get_serializer(data=item)
+        for index, raw_item in enumerate(data_list):
+            item = _normalize_upload_excel_row(raw_item)
+
+            raw_smiles = item.get('smiles')
+            smiles_key = (str(raw_smiles).strip() if raw_smiles is not None else '')
+            if not smiles_key:
+                errors.append({
+                    'linha_excel': index + 2,
+                    'erros': {'smiles': ['Este campo não pode ser vazio.']},
+                })
+                continue
+
+            existing = Molecule.objects.filter(smiles=smiles_key).first()
+            serializer = self.get_serializer(
+                instance=existing,
+                data=item,
+                partial=(existing is not None),
+            )
             if serializer.is_valid():
                 valid_data.append(serializer.validated_data)
             else:
@@ -138,10 +236,16 @@ class MoleculeViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            created_molecules = molecule_bulk_create(valid_data)
+            created_n, updated_n = molecule_bulk_upsert(valid_data)
+            parts = []
+            if created_n:
+                parts.append(f'{created_n} cadastrada(s)')
+            if updated_n:
+                parts.append(f'{updated_n} atualizada(s)')
+            message = ', '.join(parts) if parts else 'Nenhuma alteração.'
             return Response({
                 'status': 'sucesso',
-                'message': f'{len(created_molecules)} moléculas cadastradas.'
+                'message': message,
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
