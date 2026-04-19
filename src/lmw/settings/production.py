@@ -6,8 +6,8 @@ import dj_database_url
 
 
 DEBUG = False
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'api.lmwdatabase.com').split(',')
-#ALLOWED_HOSTS = ['*']#teste
+#ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'api.lmwdatabase.com').split(',')
+ALLOWED_HOSTS = ['*']#teste
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
