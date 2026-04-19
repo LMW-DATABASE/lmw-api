@@ -31,8 +31,8 @@ CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'https://lmwdatabase.co
 
 CSRF_TRUSTED_ORIGINS = [f"http://{host}" for host in ALLOWED_HOSTS]# removendo httpS
 SECURE_SSL_REDIRECT = False # Desativando para teste
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False # Desativando para teste
+CSRF_COOKIE_SECURE = False # Desativando para teste
 SECURE_HSTS_SECONDS = 31536000 # 1 ano
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
