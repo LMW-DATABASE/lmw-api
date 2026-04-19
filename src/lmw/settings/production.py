@@ -7,8 +7,7 @@ import dj_database_url
 
 DEBUG = False
 
-#ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'api.lmwdatabase.com').split(',')
-ALLOWED_HOSTS = ['*']#teste
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'api.lmwdatabase.com').split(',')
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 
@@ -30,11 +29,10 @@ else:
 
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'https://lmwdatabase.com').split(',')
 
-CSRF_TRUSTED_ORIGINS = [f"http://{host}" for host in ALLOWED_HOSTS]# removendo httpS
-SECURE_SSL_REDIRECT = False # Desativando para 
+CSRF_TRUSTED_ORIGINS = [f"https://{host}" for host in ALLOWED_HOSTS]
+SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000 # 1 ano
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
