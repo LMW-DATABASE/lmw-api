@@ -14,7 +14,9 @@ urlpatterns = [
     path('upload_excel/', MoleculeViewSet.as_view({'post': 'upload_excel'}), name='molecule-upload-excel'),
     path('<int:pk>/', MoleculeViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='molecule-detail'),
 
-    # Requests públicas
+    path('databases/', MoleculeViewSet.as_view({'get': 'databases'}), name='molecule-databases'),
+    path('referencias/', MoleculeViewSet.as_view({'get': 'referencias'}), name='molecule-referencias'),
+
     path('requests/public/create/', PublicCreateMoleculeRequest.as_view(), name='request-create'),
 
     # Admin
