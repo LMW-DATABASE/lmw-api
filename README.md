@@ -142,7 +142,9 @@ Com o ambiente rodando, você pode acessar a documentação interativa da API, g
 
 *(Lembre-se de trocar `8000` pela porta que você configurou no seu `.env`, se for o caso.)*
 
+### Ingestão pela equipe RAG
 
+Integração em lote via JSON (`POST /api/molecules/import/`): ver [docs/INGESTAO_RAG.md](docs/INGESTAO_RAG.md).
 
 ------------------------------
 ## Como criar um usuario inicial

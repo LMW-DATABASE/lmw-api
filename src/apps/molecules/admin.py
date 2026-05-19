@@ -5,13 +5,16 @@ from .services import calculate_molecular_properties
 @admin.register(Molecule)
 class MoleculeAdmin(admin.ModelAdmin):
     list_display = (
-        'nome_molecula', 
-        'smiles', 
-        'mw_average', 
-        'logp', 
-        'inchikey', 
-        'formula_molecular'
+        'nome_molecula',
+        'smiles',
+        'mw_average',
+        'logp',
+        'inchikey',
+        'formula_molecular',
+        'created_by',
+        'updated_by',
     )
+    readonly_fields = ('created_by', 'updated_by', 'created_at', 'updated_at')
     
     search_fields = ('nome_molecula', 'smiles', 'inchikey', 'nome_planta')
  
@@ -24,8 +27,11 @@ class MoleculeAdmin(admin.ModelAdmin):
                 'database', 'origem', 'geolocalizacao', 'activity',
             )
         }),
+        ('Auditoria', {
+            'fields': ('created_by', 'updated_by', 'created_at', 'updated_at'),
+        }),
         ('Dados Técnicos (RDKit)', {
-            'classes': ('collapse',), 
+            'classes': ('collapse',),
             'fields': (
                 'smiles_canonical', 'inchi', 'inchikey', 'formula_molecular',
                 'mw_exact', 'mw_average', 'logp', 'tpsa', 
@@ -38,9 +44,12 @@ class MoleculeAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         """
-        Garante que, se cadastrada manualmente no admin, 
-        a molécula também passe pelo RDKit.
+        Garante que, se cadastrada manualmente no admin,
+        a molécula também passe pelo RDKit e registra auditoria.
         """
+        if not change:
+            obj.created_by = request.user
+        obj.updated_by = request.user
         if obj.smiles:
             extra_data = calculate_molecular_properties(obj.smiles)
             if extra_data:

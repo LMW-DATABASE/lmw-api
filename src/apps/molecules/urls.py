@@ -5,6 +5,7 @@ from .views import MoleculeViewSet
 
 urlpatterns = [
     path('', MoleculeViewSet.as_view({'get': 'list', 'post': 'create'}), name='molecule-list'),
-    path('upload_excel/', MoleculeViewSet.as_view({'post': 'upload_excel'}), name='molecule-upload-excel'), 
+    path('upload_excel/', MoleculeViewSet.as_view({'post': 'upload_excel'}), name='molecule-upload-excel'),
+    path('import/', MoleculeViewSet.as_view({'post': 'import_molecules'}), name='molecule-import'),
     path('<int:pk>/', MoleculeViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='molecule-detail'),
 ]

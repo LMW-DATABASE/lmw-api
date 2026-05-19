@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.db import models
+
 
 class Molecule(models.Model):
     nome_molecula = models.CharField(max_length=255)
@@ -42,6 +44,21 @@ class Molecule(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='molecules_created',
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='molecules_updated',
+    )
 
     STATUS_CHOICES = [
         ('ok', 'Processada'),

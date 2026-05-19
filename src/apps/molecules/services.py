@@ -67,10 +67,11 @@ def apply_molecular_properties_to_instance(instance, smiles: str):
         instance.erro_processamento = str(e)
 
 
-def molecule_bulk_upsert(data_list):
+def molecule_bulk_upsert(data_list, user=None):
     """
     Upsert por string SMILES exata (strip). Duplicatas no mesmo lote: última linha prevalece.
     Retorna (created_count, updated_count).
+    user: preenche created_by/updated_by quando fornecido.
     """
     by_smiles = {}
     for raw in data_list:
@@ -91,6 +92,8 @@ def molecule_bulk_upsert(data_list):
             for key in WRITABLE_BASE_FIELDS:
                 if key in item:
                     setattr(instance, key, item[key])
+            if user is not None:
+                instance.updated_by = user
             apply_molecular_properties_to_instance(instance, smiles)
             instance.save()
             updated_count += 1
@@ -99,6 +102,9 @@ def molecule_bulk_upsert(data_list):
             for key in WRITABLE_BASE_FIELDS:
                 if key in item:
                     setattr(instance, key, item[key])
+            if user is not None:
+                instance.created_by = user
+                instance.updated_by = user
             apply_molecular_properties_to_instance(instance, smiles)
             instance.save()
             created_count += 1
