@@ -7,6 +7,7 @@ class Molecule(models.Model):
     nome_planta = models.CharField(max_length=255)
     database = models.CharField(max_length=100)
     origem = models.CharField(max_length=255, blank=True, null=True)
+    geolocalizacao = models.CharField(max_length=255, blank=True, null=True)
     activity = models.TextField(blank=True, null=True)
 
     # --- Identificadores Estruturais ---

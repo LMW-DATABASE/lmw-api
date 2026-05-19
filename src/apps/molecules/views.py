@@ -16,12 +16,13 @@ UPLOAD_EXCEL_REQUIRED_COLUMNS = (
     'nome_planta',
     'database',
 )
-UPLOAD_EXCEL_OPTIONAL_COLUMNS = ('origem', 'activity')
+UPLOAD_EXCEL_OPTIONAL_COLUMNS = ('origem', 'geolocalizacao', 'activity')
 UPLOAD_EXCEL_TEXT_PLACEHOLDERS = {
     'referencia',
     'nome_planta',
     'database',
     'origem',
+    'geolocalizacao',
     'activity',
 }
 UPLOAD_EXCEL_EMPTY_TEXT = 'Não Informado'
@@ -104,6 +105,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         databases = params.getlist('database')
         referencias = params.get('referencia')
         nome_planta = params.get('nome_planta')
+        geolocalizacao = params.get('geolocalizacao')
 
         if databases:
             queryset = queryset.filter(database__in=databases)
@@ -113,6 +115,9 @@ class MoleculeViewSet(viewsets.ModelViewSet):
 
         if nome_planta:
             queryset = queryset.filter(nome_planta__icontains=nome_planta)
+
+        if geolocalizacao:
+            queryset = queryset.filter(geolocalizacao__icontains=geolocalizacao)
 
         return queryset
 

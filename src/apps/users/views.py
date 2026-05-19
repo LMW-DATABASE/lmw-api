@@ -32,7 +32,6 @@ def login_user(request):
 
         if user is not None:
             token, created = Token.objects.get_or_create(user=user)
-            print(token)
             return Response({'token': token.key}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)

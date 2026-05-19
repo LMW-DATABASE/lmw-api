@@ -15,11 +15,14 @@ class MoleculeAdmin(admin.ModelAdmin):
     
     search_fields = ('nome_molecula', 'smiles', 'inchikey', 'nome_planta')
  
-    list_filter = ('database', 'origem')
+    list_filter = ('database', 'origem', 'geolocalizacao')
 
     fieldsets = (
         ('Informações Básicas', {
-            'fields': ('nome_molecula', 'smiles', 'referencia', 'nome_planta', 'database', 'origem', 'activity')
+            'fields': (
+                'nome_molecula', 'smiles', 'referencia', 'nome_planta',
+                'database', 'origem', 'geolocalizacao', 'activity',
+            )
         }),
         ('Dados Técnicos (RDKit)', {
             'classes': ('collapse',), 
