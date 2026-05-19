@@ -12,6 +12,7 @@ class MoleculeSerializer(serializers.ModelSerializer):
             'nome_planta',
             'database',
             'origem',
+            'geolocalizacao',
             'activity',
             'estrutura_svg',
             'status_processamento',

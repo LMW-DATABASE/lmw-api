@@ -10,6 +10,7 @@ WRITABLE_BASE_FIELDS = (
     'nome_planta',
     'database',
     'origem',
+    'geolocalizacao',
     'activity',
 )
 
