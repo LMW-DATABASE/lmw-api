@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from .models import Molecule
+from .models import Database, Molecule
 
 
 def _valid_molecule_payload(**overrides):
@@ -92,6 +92,11 @@ class MoleculeImportTests(APITestCase):
         self.assertEqual(molecule.status_processamento, 'ok')
         self.assertEqual(molecule.created_by, self.user_a)
         self.assertEqual(molecule.updated_by, self.user_a)
+        self.assertEqual(
+            list(molecule.databases.values_list('nome_banco', flat=True)),
+            ['RAG'],
+        )
+        self.assertTrue(Database.objects.filter(nome_banco='RAG').exists())
 
     def test_import_same_smiles_updates_and_sets_updated_by(self):
         smiles = 'CCO'
@@ -123,6 +128,28 @@ class MoleculeImportTests(APITestCase):
         self.assertEqual(molecule.created_by, self.user_a)
         self.assertEqual(molecule.updated_by, self.user_b)
         self.assertEqual(molecule.nome_molecula, 'Etanol atualizado')
+
+    def test_import_same_smiles_adds_new_database_link(self):
+        smiles = 'CCN'
+        self._auth(self.token_a)
+        self.client.post(
+            self.import_url,
+            {'molecules': [_valid_molecule_payload(smiles=smiles, database='RAG')]},
+            format='json',
+        )
+
+        response = self.client.post(
+            self.import_url,
+            {'molecules': [_valid_molecule_payload(smiles=smiles, database='NPASS')]},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        molecule = Molecule.objects.get(smiles=smiles)
+        self.assertEqual(
+            list(molecule.databases.values_list('nome_banco', flat=True).order_by('nome_banco')),
+            ['NPASS', 'RAG'],
+        )
 
     def test_import_optional_empty_field_becomes_nao_informado(self):
         self._auth(self.token_a)
@@ -175,3 +202,43 @@ class MoleculeCreateAuditTests(APITestCase):
         molecule = Molecule.objects.get(smiles='c1ccccc1')
         self.assertEqual(molecule.created_by, self.user)
         self.assertEqual(molecule.updated_by, self.user)
+        self.assertEqual(response.data['database'], ['RAG'])
+
+    def test_unit_create_accepts_multiple_databases(self):
+        response = self.client.post(
+            '/api/molecules/',
+            _valid_molecule_payload(
+                smiles='CCCl',
+                database=['RAG', 'NPASS'],
+            ),
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        molecule = Molecule.objects.get(smiles='CCCl')
+        self.assertEqual(
+            list(molecule.databases.values_list('nome_banco', flat=True).order_by('nome_banco')),
+            ['NPASS', 'RAG'],
+        )
+
+    def test_unit_create_same_smiles_adds_database_to_existing_molecule(self):
+        self.client.post(
+            '/api/molecules/',
+            _valid_molecule_payload(smiles='CCBr', database='RAG'),
+            format='json',
+        )
+
+        response = self.client.post(
+            '/api/molecules/',
+            _valid_molecule_payload(smiles='CCBr', database='NPASS'),
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Molecule.objects.filter(smiles='CCBr').count(), 1)
+
+        molecule = Molecule.objects.get(smiles='CCBr')
+        self.assertEqual(
+            list(molecule.databases.values_list('nome_banco', flat=True).order_by('nome_banco')),
+            ['NPASS', 'RAG'],
+        )

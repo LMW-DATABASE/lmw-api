@@ -1,6 +1,19 @@
 from django.contrib import admin
-from .models import Molecule
+from .models import Database, MoleculaDatabase, Molecule
 from .services import calculate_molecular_properties
+
+
+@admin.register(Database)
+class DatabaseAdmin(admin.ModelAdmin):
+    list_display = ('nome_banco', 'descricao')
+    search_fields = ('nome_banco', 'descricao')
+
+
+class MoleculaDatabaseInline(admin.TabularInline):
+    model = MoleculaDatabase
+    extra = 1
+    autocomplete_fields = ('database',)
+
 
 @admin.register(Molecule)
 class MoleculeAdmin(admin.ModelAdmin):
@@ -18,13 +31,14 @@ class MoleculeAdmin(admin.ModelAdmin):
     
     search_fields = ('nome_molecula', 'smiles', 'inchikey', 'nome_planta')
  
-    list_filter = ('database', 'origem', 'geolocalizacao')
+    list_filter = ('databases', 'origem', 'geolocalizacao')
+    inlines = (MoleculaDatabaseInline,)
 
     fieldsets = (
         ('Informações Básicas', {
             'fields': (
                 'nome_molecula', 'smiles', 'referencia', 'nome_planta',
-                'database', 'origem', 'geolocalizacao', 'activity',
+                'origem', 'geolocalizacao', 'activity',
             )
         }),
         ('Auditoria', {
