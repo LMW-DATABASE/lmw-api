@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from .filters import apply_molecule_range_filters
 from .models import Molecule
 from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer
 from .services import calculate_molecular_properties, molecule_bulk_upsert
@@ -145,7 +146,13 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     queryset = Molecule.objects.all().order_by('nome_molecula')
     serializer_class = MoleculeSerializer
     filter_backends = [filters.SearchFilter]
-    search_fields = ['nome_molecula', 'smiles', 'nome_planta']
+    search_fields = [
+        'nome_molecula',
+        'nome_planta',
+        'smiles',
+        'formula_molecular',
+        'inchikey',
+    ]
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -176,6 +183,8 @@ class MoleculeViewSet(viewsets.ModelViewSet):
 
         if geolocalizacao:
             queryset = queryset.filter(geolocalizacao__icontains=geolocalizacao)
+
+        queryset = apply_molecule_range_filters(queryset, params)
 
         return queryset
 

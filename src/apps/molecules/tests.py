@@ -175,3 +175,104 @@ class MoleculeCreateAuditTests(APITestCase):
         molecule = Molecule.objects.get(smiles='c1ccccc1')
         self.assertEqual(molecule.created_by, self.user)
         self.assertEqual(molecule.updated_by, self.user)
+
+
+class MoleculeListFilterTests(APITestCase):
+    list_url = '/api/molecules/'
+
+    def setUp(self):
+        self.ok_molecule = Molecule.objects.create(
+            nome_molecula='Cafeína',
+            smiles='CN1C=NC2=C1C(=O)N(C(=O)N2C)C',
+            referencia='ref-cafeina',
+            nome_planta='Coffea',
+            database='RAG',
+            status_processamento='ok',
+            formula_molecular='C8H10N4O2',
+            inchikey='RYYVLZVUVIJVGH-UHFFFAOYSA-N',
+            mw_average=194.19,
+            mw_exact=194.08038,
+            logp=-0.03,
+            tpsa=61.82,
+        )
+        self.other_molecule = Molecule.objects.create(
+            nome_molecula='Etanol',
+            smiles='CCO',
+            referencia='ref-etanol',
+            nome_planta='Fermentação',
+            database='RAG',
+            status_processamento='ok',
+            formula_molecular='C2H6O',
+            inchikey='LFQSCWFLJHTTHZ-UHFFFAOYSA-N',
+            mw_average=46.07,
+            mw_exact=46.04186,
+            logp=-0.31,
+            tpsa=20.23,
+        )
+        self.error_molecule = Molecule.objects.create(
+            nome_molecula='Erro RDKit',
+            smiles='INVALID',
+            referencia='ref-erro',
+            nome_planta='Teste',
+            database='RAG',
+            status_processamento='erro',
+            formula_molecular='C8H10N4O2',
+            inchikey='RYYVLZVUVIJVGH-UHFFFAOYSA-N',
+        )
+        self.null_props_molecule = Molecule.objects.create(
+            nome_molecula='Sem propriedades',
+            smiles='CCC',
+            referencia='ref-null',
+            nome_planta='Teste',
+            database='RAG',
+            status_processamento='ok',
+            formula_molecular='C3H8',
+            inchikey='ATUOYWHBWRVNOR-UHFFFAOYSA-N',
+            mw_average=None,
+            logp=None,
+        )
+
+    def _list_ids(self, **params):
+        response = self.client.get(self.list_url, params)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return {item['id'] for item in response.data}
+
+    def test_search_by_formula_molecular(self):
+        ids = self._list_ids(search='C8H10N4O2')
+        self.assertIn(self.ok_molecule.id, ids)
+        self.assertNotIn(self.other_molecule.id, ids)
+
+    def test_search_by_inchikey_prefix(self):
+        ids = self._list_ids(search='RYYVLZ')
+        self.assertIn(self.ok_molecule.id, ids)
+        self.assertNotIn(self.other_molecule.id, ids)
+
+    def test_search_by_smiles(self):
+        ids = self._list_ids(search='CCO')
+        self.assertIn(self.other_molecule.id, ids)
+        self.assertNotIn(self.ok_molecule.id, ids)
+
+    def test_mw_average_range_filter(self):
+        ids = self._list_ids(mw_average_min=100, mw_average_max=200)
+        self.assertIn(self.ok_molecule.id, ids)
+        self.assertNotIn(self.other_molecule.id, ids)
+
+    def test_combined_search_and_range_filter(self):
+        ids = self._list_ids(search='C8H10N4O2', logp_max=5)
+        self.assertEqual(ids, {self.ok_molecule.id})
+
+    def test_anonymous_excludes_error_molecules(self):
+        ids = self._list_ids(search='C8H10N4O2')
+        self.assertNotIn(self.error_molecule.id, ids)
+
+    def test_range_filter_excludes_null_field_values(self):
+        ids = self._list_ids(mw_average_min=1)
+        self.assertIn(self.ok_molecule.id, ids)
+        self.assertIn(self.other_molecule.id, ids)
+        self.assertNotIn(self.null_props_molecule.id, ids)
+
+    def test_invalid_range_min_greater_than_max_is_ignored(self):
+        ids = self._list_ids(mw_average_min=500, mw_average_max=100)
+        self.assertIn(self.ok_molecule.id, ids)
+        self.assertIn(self.other_molecule.id, ids)
+        self.assertIn(self.null_props_molecule.id, ids)
