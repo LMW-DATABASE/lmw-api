@@ -2,12 +2,31 @@ from django.conf import settings
 from django.db import models
 
 
+class Database(models.Model):
+    nome_banco = models.CharField(max_length=100, unique=True)
+    descricao = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'databases'
+        ordering = ('nome_banco',)
+        verbose_name = 'Database'
+        verbose_name_plural = 'Databases'
+
+    def __str__(self):
+        return self.nome_banco
+
+
 class Molecule(models.Model):
     nome_molecula = models.CharField(max_length=255)
     smiles = models.CharField(max_length=500, unique=True)
     referencia = models.CharField(max_length=2000)
     nome_planta = models.CharField(max_length=255)
-    database = models.CharField(max_length=100)
+    databases = models.ManyToManyField(
+        Database,
+        through='MoleculaDatabase',
+        related_name='molecules',
+        blank=True,
+    )
     origem = models.CharField(max_length=255, blank=True, null=True)
     geolocalizacao = models.CharField(max_length=255, blank=True, null=True)
     activity = models.TextField(blank=True, null=True)
@@ -75,3 +94,28 @@ class Molecule(models.Model):
 
     def __str__(self):
         return self.nome_molecula
+
+
+class MoleculaDatabase(models.Model):
+    molecula = models.ForeignKey(
+        Molecule,
+        on_delete=models.CASCADE,
+        related_name='molecula_databases',
+    )
+    database = models.ForeignKey(
+        Database,
+        on_delete=models.CASCADE,
+        related_name='molecula_databases',
+    )
+
+    class Meta:
+        db_table = 'molecula_database'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['molecula', 'database'],
+                name='unique_molecula_database',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.molecula} - {self.database}'

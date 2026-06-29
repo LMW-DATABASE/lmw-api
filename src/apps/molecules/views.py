@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from .filters import apply_molecule_range_filters
-from .models import Molecule
+from .models import Database, Molecule
 from .serializers import MoleculeSerializer, MoleculeAdvancedSerializer
 from .services import calculate_molecular_properties, molecule_bulk_upsert
 
@@ -37,6 +37,8 @@ UPLOAD_EXCEL_EMPTY_TEXT = INGEST_EMPTY_TEXT
 
 
 def _normalize_excel_cell(value):
+    if isinstance(value, (list, tuple, set)):
+        return list(value)
     if pd.isna(value):
         return None
     if isinstance(value, str):
@@ -152,6 +154,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         'smiles',
         'formula_molecular',
         'inchikey',
+        'databases__nome_banco',
     ]
 
     def get_serializer_class(self):
@@ -160,7 +163,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         return MoleculeSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().prefetch_related('databases')
         params = self.request.query_params
         user = self.request.user
 
@@ -173,7 +176,7 @@ class MoleculeViewSet(viewsets.ModelViewSet):
         geolocalizacao = params.get('geolocalizacao')
 
         if databases:
-            queryset = queryset.filter(database__in=databases)
+            queryset = queryset.filter(databases__nome_banco__in=databases).distinct()
 
         if referencias:
             queryset = queryset.filter(referencia__icontains=referencias)
@@ -233,10 +236,10 @@ class MoleculeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def databases(self, request):
         databases = (
-            Molecule.objects
-            .values_list('database', flat=True)
+            Database.objects
+            .values_list('nome_banco', flat=True)
             .distinct()
-            .order_by('database')
+            .order_by('nome_banco')
         )
         return Response(databases)
 
